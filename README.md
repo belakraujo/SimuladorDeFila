@@ -1,4 +1,4 @@
-### **Resumo do Código**  
+### **O que o código realiza**  
 Este código implementa um **simulador de filas G/G/c/K** em Java. Ele usa um gerador de números aleatórios para simular a chegada e atendimento de clientes, gerenciando estatísticas como clientes perdidos e distribuição de estados da fila.  
 
 **Duas filas são simuladas:**  
