@@ -12,9 +12,9 @@ A simulação começa com um cliente chegando no tempo **2.0** e roda até **100
 1. **Copie e salve o código** em um arquivo chamado `Fila.java`.  
 2. **Compile o código** no terminal/cmd:  
    ```bash
-   javac Fila.java
+   javac FilasTandem.java
    ```  
 3. **Execute a simulação** com:  
    ```bash
-   java Fila
+   java FilasTandem
    ```  
