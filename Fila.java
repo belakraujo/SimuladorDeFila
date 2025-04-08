@@ -1,91 +1,102 @@
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Random;
+import java.util.*;
 
-class FilaSimples {
-    private int servidores;
-    private int capacidade;
-    private Queue<Double> fila;
-    private double tempo;
-    private int numClientesPerdidos;
-    private double[] tempoPorEstado;
-    private double ultimoTempo;
-    private static Random random = new Random(42);
+class Cliente {
+    double tempoChegada;
 
-    public FilaSimples(int servidores, int capacidade) {
+    public Cliente(double tempoChegada) {
+        this.tempoChegada = tempoChegada;
+    }
+}
+
+class Fila {
+    int servidores;
+    int capacidade;
+    Queue<Cliente> fila;
+    double[] tempoPorEstado;
+    int clientesPerdidos = 0;
+    double ultimoTempo = 0;
+    double tempoAtual = 0;
+
+    public Fila(int servidores, int capacidade) {
         this.servidores = servidores;
         this.capacidade = capacidade;
         this.fila = new LinkedList<>();
-        this.tempo = 0;
-        this.numClientesPerdidos = 0;
         this.tempoPorEstado = new double[capacidade + 1];
-        this.ultimoTempo = 0;
     }
 
-    private double nextRandom() {
-        return random.nextDouble();
+    public boolean podeAdicionar() {
+        return fila.size() < capacidade;
     }
 
-    private void chegada() {
-        double interarrivalTime = 2 + (3 * nextRandom()); // Tempo entre 2 e 5
-        tempo += interarrivalTime;
-        if (fila.size() < capacidade) {
-            fila.add(tempo);
+    public void adicionarCliente(Cliente cliente) {
+        if (podeAdicionar()) {
+            fila.add(cliente);
         } else {
-            numClientesPerdidos++;
+            clientesPerdidos++;
         }
-        atualizarEstados();
     }
 
-    private void saida() {
-        if (!fila.isEmpty()) {
-            double atendimentoTime = 3 + (2 * nextRandom()); // Tempo entre 3 e 5
-            tempo += atendimentoTime;
-            for (int i = 0; i < Math.min(servidores, fila.size()); i++) {
-                fila.poll();
-            }
+    public int processarAtendimentos(double atendimentoMin, double atendimentoMax, double tempoAtual, Random rnd) {
+        int atendidos = 0;
+        for (int i = 0; i < servidores && !fila.isEmpty(); i++) {
+            fila.poll(); 
+            atendidos++;
         }
-        atualizarEstados();
+        return atendidos;
     }
 
-    private void atualizarEstados() {
+    public void atualizarEstado(double tempoAtual) {
         int estado = fila.size();
-        tempoPorEstado[estado] += tempo - ultimoTempo;
-        ultimoTempo = tempo;
+        tempoPorEstado[estado] += tempoAtual - ultimoTempo;
+        ultimoTempo = tempoAtual;
+        this.tempoAtual = tempoAtual;
     }
 
-    public void rodarSimulacao(int eventos) {
-        tempo = 2.0; // Primeiro cliente chega no tempo 2.0
-        while (eventos > 0) {
-            if (nextRandom() < 0.5) {
-                chegada();
-            } else {
-                saida();
-            }
-            eventos--;
-        }
-        exibirResultados();
-    }
-
-    private void exibirResultados() {
-        System.out.println("\nSimulação G/G/" + servidores + "/" + capacidade);
-        System.out.println("Clientes perdidos: " + numClientesPerdidos);
-        System.out.println("Tempo global da simulação: " + String.format("%.2f", tempo));
-        System.out.println("Distribuição de probabilidade dos estados da fila:");
-        double totalTime = tempo;
+    public void imprimirEstatisticas() {
+        System.out.println("Clientes perdidos: " + clientesPerdidos);
+        System.out.println("Distribuição de estados:");
         for (int i = 0; i < tempoPorEstado.length; i++) {
-            double prob = totalTime > 0 ? tempoPorEstado[i] / totalTime : 0;
-            System.out.println("Estado " + i + ": " + String.format("%.4f", prob));
+            System.out.printf("Estado %d: %.4f\n", i, tempoPorEstado[i] / tempoAtual);
         }
     }
 }
 
-public class SimuladorFila {
+public class SimuladorDuasFilasTandem {
     public static void main(String[] args) {
-        FilaSimples filaGG1_5 = new FilaSimples(1, 5);
-        filaGG1_5.rodarSimulacao(100000);
+        int numEventos = 100000;
 
-        FilaSimples filaGG2_5 = new FilaSimples(2, 5);
-        filaGG2_5.rodarSimulacao(100000);
+        // Configurações
+        double chegadaMin = 1.0, chegadaMax = 4.0;
+        double atendimento1Min = 3.0, atendimento1Max = 4.0;
+        double atendimento2Min = 2.0, atendimento2Max = 3.0;
+
+        Fila fila1 = new Fila(2, 3);
+        Fila fila2 = new Fila(1, 5);
+
+        Random rnd = new Random(42);
+        double tempoAtual = 1.5; 
+
+        for (int i = 0; i < numEventos; i++) {
+            double interChegada = chegadaMin + (chegadaMax - chegadaMin) * rnd.nextDouble();
+            tempoAtual += interChegada;
+            fila1.atualizarEstado(tempoAtual);
+            fila2.atualizarEstado(tempoAtual);
+
+            fila1.adicionarCliente(new Cliente(tempoAtual));
+
+            int atendidosFila1 = fila1.processarAtendimentos(atendimento1Min, atendimento1Max, tempoAtual, rnd);
+            for (int j = 0; j < atendidosFila1; j++) {
+                fila2.adicionarCliente(new Cliente(tempoAtual));
+            }
+            fila2.processarAtendimentos(atendimento2Min, atendimento2Max, tempoAtual, rnd);
+        }
+
+        System.out.println("Fila 1 (G/G/2/3)");
+        fila1.imprimirEstatisticas();
+
+        System.out.println("\nFila 2 (G/G/1/5)");
+        fila2.imprimirEstatisticas();
+
+        System.out.printf("\nTempo global da simulação: %.2f\n", tempoAtual);
     }
 }
